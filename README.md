@@ -53,6 +53,7 @@ source code.
 ## Default Keybindings
 
 - `Mod1+Return`: spawn terminal (st)
+- `Mod1+Shift+Return`: zoom (swap with master)
 - `Mod1+j/k`: focus next/previous window
 - `Mod1+h/l`: decrease/increase master area
 - `Mod1+Shift+c`: kill focused window

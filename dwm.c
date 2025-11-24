@@ -364,7 +364,7 @@ void sendmon(Client *c, Monitor *m) {}
 void setclientstate(Client *c, long state) { long data[] = { state, None }; XChangeProperty(dpy, c->win, wmatom[WMState], wmatom[WMState], 32, PropModeReplace, (unsigned char *)data, 2); }
 void setfocus(Client *c) { XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime); }
 void setfullscreen(Client *c, int fullscreen) {}
-void setlayout(const Arg *arg) {}
+void setlayout(const Arg *arg) { if (!arg || !arg->v || arg->v != &layouts[selmon->sellt]) selmon->sellt ^= 1; if (arg && arg->v) selmon->sellt = (Layout *)arg->v - layouts; arrange(selmon); }
 void setmfact(const Arg *arg) { float f; if (!arg || !selmon) return; f = arg->f < 1.0 ? arg->f + selmon->mfact : arg->f - 1.0; if (f < 0.1 || f > 0.9) return; selmon->mfact = f; arrange(selmon); }
 void setup(void) { sigchld(0); screen = DefaultScreen(dpy); root = RootWindow(dpy, screen); sw = DisplayWidth(dpy, screen); sh = DisplayHeight(dpy, screen); wmatom[WMProtocols] = XInternAtom(dpy, "WM_PROTOCOLS", False); wmatom[WMDelete] = XInternAtom(dpy, "WM_DELETE_WINDOW", False); wmatom[WMState] = XInternAtom(dpy, "WM_STATE", False); wmatom[WMTakeFocus] = XInternAtom(dpy, "WM_TAKE_FOCUS", False); XSetErrorHandler(xerror); XSync(dpy, False); XSetErrorHandler(xerror); XSelectInput(dpy, root, SubstructureRedirectMask|SubstructureNotifyMask|ButtonPressMask|PointerMotionMask|EnterWindowMask|LeaveWindowMask|StructureNotifyMask|PropertyChangeMask); grabkeys(); updategeom(); createmon(); }
 void seturgent(Client *c, int urg) {}
