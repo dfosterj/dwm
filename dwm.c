@@ -2552,7 +2552,6 @@ updatesystray(void)
 {
 	unsigned int w = 0;
 	Client *i;
-	Monitor *m = systraytomon(NULL);
 	if (!showsystray)
 		return;
 	if (!systray) {
@@ -2697,7 +2696,8 @@ wintomon(Window w)
 }
 
 static Client *
-wintosystrayicon(Window w) {
+wintosystrayicon(Window w)
+{
 	if (!showsystray || !systray)
 		return NULL;
 	Client *i = NULL;
