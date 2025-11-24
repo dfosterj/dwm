@@ -114,6 +114,30 @@ To test the autostart script manually:
 - **Status not updating**: Check script is running (`ps aux | grep autostart`)
 - **Wallpaper not setting**: Verify path and that feh/nitrogen/xwallpaper is installed
 
+## Template Script
+
+Basic template for `autostart.sh`:
+
+```bash
+#!/bin/sh
+
+# Wallpaper setup
+WALLPAPER="$HOME/.local/share/dwm/wallpaper/wallpaper.jpg"
+if [ -f "$WALLPAPER" ] && command -v feh >/dev/null 2>&1; then
+    feh --bg-scale "$WALLPAPER" &
+fi
+
+# Status bar loop
+while true; do
+    # Your status components here
+    status="$(date '+%Y-%m-%d %H:%M:%S')"
+    
+    # Update status bar
+    xsetroot -name "$status"
+    sleep 1
+done
+```
+
 ## For Next Project
 
 1. Copy `autostart.sh` template
@@ -121,4 +145,29 @@ To test the autostart script manually:
 3. Modify `autostart.sh` for your needs
 4. Run `./install-autostart.sh` to install
 5. Rebuild dwm: `make clean install`
+
+## install-autostart.sh Template
+
+Basic template for installation script:
+
+```bash
+#!/bin/sh
+
+DWM_SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
+AUTOSTART_SCRIPT="$DWM_SOURCE_DIR/autostart.sh"
+
+# Determine installation directory
+if [ -n "$XDG_DATA_HOME" ]; then
+    INSTALL_DIR="$XDG_DATA_HOME/dwm"
+elif [ -d "$HOME/.local/share" ]; then
+    INSTALL_DIR="$HOME/.local/share/dwm"
+else
+    INSTALL_DIR="$HOME/.dwm"
+fi
+
+mkdir -p "$INSTALL_DIR"
+cp "$AUTOSTART_SCRIPT" "$INSTALL_DIR/"
+chmod +x "$INSTALL_DIR/autostart.sh"
+echo "Installed to: $INSTALL_DIR"
+```
 
