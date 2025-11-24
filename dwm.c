@@ -310,11 +310,11 @@ struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 
 /* function implementations - minimal stubs */
 void applyrules(Client *c) { c->tags = c->mon->tagset[c->mon->seltags]; }
-void arrange(Monitor *m) { showhide(m->stack); monocle(m); restack(m); }
+void arrange(Monitor *m) { showhide(m->stack); if (m->sel && m->sel->isfloating) return; if (layouts[m->sellt].arrange) layouts[m->sellt].arrange(m); restack(m); }
 void attach(Client *c) { c->next = c->mon->clients; c->mon->clients = c; }
 void attachstack(Client *c) { c->snext = c->mon->stack; c->mon->stack = c; }
 void buttonpress(XEvent *e) {}
-void cleanup(void) { XCloseDisplay(dpy); }
+void cleanup(void) {}
 void cleanupmon(Monitor *mon) { free(mon); }
 void clientmessage(XEvent *e) {}
 void configure(Client *c) { XConfigureEvent ce; ce.type = ConfigureNotify; ce.display = dpy; ce.event = c->win; ce.window = c->win; ce.x = c->x; ce.y = c->y; ce.width = c->w; ce.height = c->h; ce.border_width = c->bw; ce.above = None; ce.override_redirect = False; XSendEvent(dpy, c->win, False, StructureNotifyMask, (XEvent *)&ce); }
@@ -365,10 +365,10 @@ void setclientstate(Client *c, long state) { long data[] = { state, None }; XCha
 void setfocus(Client *c) { XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime); }
 void setfullscreen(Client *c, int fullscreen) {}
 void setlayout(const Arg *arg) {}
-void setmfact(const Arg *arg) { float f; if (!arg || !selmon->sel) return; f = arg->f < 1.0 ? arg->f + selmon->mfact : arg->f - 1.0; if (f < 0.1 || f > 0.9) return; selmon->mfact = f; arrange(selmon); }
+void setmfact(const Arg *arg) { float f; if (!arg || !selmon) return; f = arg->f < 1.0 ? arg->f + selmon->mfact : arg->f - 1.0; if (f < 0.1 || f > 0.9) return; selmon->mfact = f; arrange(selmon); }
 void setup(void) { sigchld(0); screen = DefaultScreen(dpy); root = RootWindow(dpy, screen); sw = DisplayWidth(dpy, screen); sh = DisplayHeight(dpy, screen); wmatom[WMProtocols] = XInternAtom(dpy, "WM_PROTOCOLS", False); wmatom[WMDelete] = XInternAtom(dpy, "WM_DELETE_WINDOW", False); wmatom[WMState] = XInternAtom(dpy, "WM_STATE", False); wmatom[WMTakeFocus] = XInternAtom(dpy, "WM_TAKE_FOCUS", False); XSetErrorHandler(xerror); XSync(dpy, False); XSetErrorHandler(xerror); XSelectInput(dpy, root, SubstructureRedirectMask|SubstructureNotifyMask|ButtonPressMask|PointerMotionMask|EnterWindowMask|LeaveWindowMask|StructureNotifyMask|PropertyChangeMask); grabkeys(); updategeom(); createmon(); }
 void seturgent(Client *c, int urg) {}
-void showhide(Client *c) { if (!c) return; if (ISVISIBLE(c)) { XMoveWindow(dpy, c->win, c->x, c->y); if (!c->mon->sel || c->mon->sel->isfloating || !c->mon->sel) resize(c, c->x, c->y, c->w, c->h, 0); showhide(c->snext); } else { showhide(c->snext); XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y); } }
+void showhide(Client *c) { if (!c) return; if (ISVISIBLE(c)) { XMoveWindow(dpy, c->win, c->x, c->y); if (c->mon->sel && c->mon->sel->isfloating) resize(c, c->x, c->y, c->w, c->h, 0); showhide(c->snext); } else { showhide(c->snext); XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y); } }
 void sigchld(int unused) { if (signal(SIGCHLD, sigchld) == SIG_ERR) die("can't install SIGCHLD handler"); while (0 < waitpid(-1, NULL, WNOHANG)); }
 void spawn(const Arg *arg) { if (fork() == 0) { if (dpy) close(ConnectionNumber(dpy)); setsid(); execvp(((char **)arg->v)[0], (char **)arg->v); fprintf(stderr, "dwm: execvp %s", ((char **)arg->v)[0]); perror(" failed"); exit(EXIT_FAILURE); } }
 void tag(const Arg *arg) { if (selmon->sel && arg->ui & TAGMASK) { selmon->sel->tags = arg->ui & TAGMASK; focus(NULL); arrange(selmon); } }
