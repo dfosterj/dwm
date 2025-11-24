@@ -75,3 +75,7 @@ while true; do
 	sleep 1
 done
 
+
+# set keyboard layout
+setxkbmap -layout us
+
