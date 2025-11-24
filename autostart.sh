@@ -42,23 +42,49 @@ while true; do
 	# PulseAudio volume
 	vol=""
 	if command -v pactl >/dev/null 2>&1; then
-		sink=$(pactl info | grep "Default Sink" | cut -d' ' -f3)
+		sink=$(pactl info 2>/dev/null | grep "Default Sink" | cut -d' ' -f3)
 		if [ -n "$sink" ]; then
-			mute=$(pactl get-sink-mute "$sink")
-			if [[ "$mute" == *"yes"* ]]; then
+			mute=$(pactl get-sink-mute "$sink" 2>/dev/null | grep -o "yes\|no")
+			if [ "$mute" = "yes" ]; then
 				vol="🔇 Muted"
 			else
-				pct=$(pactl get-sink-volume "$sink" | awk 'NR==1{print $5}')
-				vol="🔊 $pct"
+				pct=$(pactl get-sink-volume "$sink" 2>/dev/null | head -1 | awk '{print $5}' | tr -d '%')
+				[ -n "$pct" ] && vol="🔊 $pct%"
 			fi
+		fi
+	fi
+
+	# Wi-Fi
+	wifi=""
+	if command -v nmcli >/dev/null 2>&1; then
+		wifi_state=$(nmcli -t -f WIFI g 2>/dev/null)
+		if [ "$wifi_state" = "enabled" ]; then
+			ssid=$(nmcli -t -f ACTIVE,SSID dev wifi 2>/dev/null | grep '^yes:' | cut -d':' -f2)
+			[ -z "$ssid" ] && ssid="Disconnected"
+			wifi="📶 $ssid"
+		else
+			wifi="📶 Off"
+		fi
+	fi
+
+	# Bluetooth
+	bt=""
+	if command -v bluetoothctl >/dev/null 2>&1; then
+		bt_state=$(bluetoothctl show 2>/dev/null | grep "Powered:" | awk '{print $2}')
+		if [ "$bt_state" = "yes" ]; then
+			bt_dev=$(bluetoothctl devices Connected 2>/dev/null | head -1 | cut -d' ' -f3-)
+			[ -z "$bt_dev" ] && bt_dev="On"
+			bt="🔵 $bt_dev"
+		else
+			bt="🔵 Off"
 		fi
 	fi
 
 	# Clock
 	time="$(date '+%Y-%m-%d %H:%M:%S')"
 
-	# Update dwm bar
-	xsetroot -name "$batt   $vol   $time"
+	# Update dwm bar (format with separators for click detection)
+	xsetroot -name "${batt} | ${wifi} | ${bt} | ${vol} | ${time}"
 	sleep 1
 done
 
