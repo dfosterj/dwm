@@ -9,7 +9,6 @@ This fork includes the following patches:
 - **movestack** - Move clients up/down in the stack (Mod+Shift+j/k)
 - **systray** - System tray support in the status bar
 - **uselessgap** - Simple gaps between windows (6px by default)
-- **autodarkmode** - Automatic dark/light mode switching based on `~/.lightmode` file
 - **restartsig** - Restart dwm with signals or Mod+Ctrl+Shift+q
 
 ## Customizations
@@ -25,8 +24,9 @@ This fork includes the following patches:
   - `Mod+m` - Toggle mute
   - `Mod+w` - Toggle WiFi
   - `Mod+Shift+j/k` - Move windows up/down in stack
+  - `Mod+Ctrl+Left` - Previous workspace
+  - `Mod+Ctrl+Right` - Next workspace
 - **Gaps**: Simple 6px gaps between windows (configurable via `gappx` in `config.def.h`)
-- **Dark/Light Mode**: Automatically switches based on presence of `~/.lightmode` file. Send SIGHUP to dwm to refresh mode.
 
 ## Requirements
 
@@ -86,25 +86,17 @@ make clean install
 - **PulseAudio** (`pactl`) - Audio system for volume control
 - **NetworkManager** (`nmcli`) - Network management (for WiFi toggle)
 
-### Dark/Light Mode
-dwm automatically switches between dark and light color schemes based on the presence of `~/.lightmode`:
-- If `~/.lightmode` exists: uses light color scheme
-- If `~/.lightmode` doesn't exist: uses dark color scheme (default)
-- To switch modes: create/remove `~/.lightmode` and send SIGHUP to dwm: `pkill -SIGHUP dwm`
-- Can be integrated with tools like `darkman` or `Redshift` for automatic switching
+### Status Bar and Session Components
+The `./autostart.sh` script handles:
+- **Status bar updates**: Battery, WiFi, volume, and clock information displayed in the dwm bar
+- **Session startup**: Wallpaper setting, notification daemon (dunst), and GTK theme configuration
+
+Run `./autostart.sh` in your `.xinitrc` or session manager to enable these features.
 
 ### Gaps
 Simple gaps between windows (6px by default, configurable via `gappx` in `config.def.h`):
 - Gaps are automatically removed in monocle layout or when only one window is visible
 - Gaps are applied in tiled layouts when multiple windows are present
-
-## Recent Changes
-
-- **Removed**: `autostart` patch (no longer using autostart scripts)
-- **Removed**: `vanitygaps` patch (replaced with simpler `uselessgap`)
-- **Added**: `autodarkmode` patch (automatic dark/light mode switching)
-- **Added**: `uselessgap` patch (simple 6px gaps between windows)
-- **Customization**: dmenu now appears at bottom of screen (`-b` flag)
 
 ## Patches Applied
 
@@ -113,7 +105,6 @@ All patches are located in the `patches/` directory:
 - `dwm-movestack-20211115-a786211.diff`
 - `dwm-systray-6.6.diff`
 - `dwm-uselessgap-20211119-58414bee958f2.diff`
-- `dwm-autodarkmode-20250224-6.5.diff`
 - `dwm-restartsig-20180523-6.2.diff`
 
 ## License
