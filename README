@@ -52,7 +52,11 @@ This fork includes the following patches:
    make clean install
    ```
    
-   Note: `config.h` is automatically generated from `config.def.h` by the Makefile. If you encounter compilation errors about missing variables or functions, run `make clean` to force regeneration.
+   **Important**: If you encounter compilation errors about missing variables or functions (like `dmenucmd`, `colors`, `incrgaps`, etc.), this usually means `config.h` is out of date. Run:
+   ```bash
+   make clean
+   ```
+   This will remove `config.h` and force it to be regenerated from `config.def.h` on the next build.
 
 3. Add to your `.xinitrc`:
    ```bash
