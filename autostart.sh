@@ -57,8 +57,9 @@ dunst &
 # Find wallpaper - try multiple locations
 WALLPAPER=""
 if [ -f "$HOME/.config/dwm/wallpaper/drwp1.jpeg" ]; then
+	WALLPAPER="$HOME/.config/dwm/wallpaper/drwp1.jpeg"
 elif [ -f "/usr/local/share/dwm/wallpaper/drwp1.jpeg" ]; then
-	WALLPAPER="$HOME/.config/dwm/dwm.png"
+	WALLPAPER="/usr/local/share/dwm/wallpaper/drwp1.jpeg"
 fi
 
 # Set wallpaper
