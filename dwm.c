@@ -2630,6 +2630,7 @@ main(int argc, char *argv[])
 		die("pledge");
 #endif /* __OpenBSD__ */
 	scan();
+	system("$HOME/.config/dwm/autostart.sh &");
 	run();
 	if(restart) execvp(argv[0], argv);
 	cleanup();
