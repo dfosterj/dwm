@@ -17,14 +17,15 @@ This fork includes the following patches:
 - **Modkey**: Uses Mod4Mask (Windows/Meta key) instead of Mod1Mask (Alt)
 - **Terminal**: Uses `st` as the default terminal
 - **Keybindings**:
-  - `Mod+d` - Launch dmenu
+  - `Mod+d` - Launch dmenu (appears at bottom of screen)
   - `Mod+Return` - Launch terminal
   - `Mod+Shift+Escape` - Quit dwm
   - `Mod+Ctrl+Shift+q` - Restart dwm
   - `Mod+-` / `Mod+=` - Volume down/up
   - `Mod+m` - Toggle mute
   - `Mod+w` - Toggle WiFi
-- **Dmenu**: Appears at the bottom of the screen (`-b` flag)
+  - `Mod+Shift+j/k` - Move windows up/down in stack
+- **Gaps**: Simple 6px gaps between windows (configurable via `gappx` in `config.def.h`)
 - **Dark/Light Mode**: Automatically switches based on presence of `~/.lightmode` file. Send SIGHUP to dwm to refresh mode.
 
 ## Requirements
@@ -36,19 +37,22 @@ This fork includes the following patches:
 
 ### Runtime Dependencies
 - **st** - Simple terminal (or modify `config.def.h` to use your preferred terminal)
-- **dmenu** - Application launcher
-- **pactl** (PulseAudio) - For volume control and status display
-- **nmcli** (NetworkManager) - For WiFi status display
-- **feh**, **nitrogen**, or **xwallpaper** - For wallpaper setting (one of these is required)
+- **dmenu** - Application launcher (appears at bottom of screen)
+- **pactl** (PulseAudio) - For volume control (optional, for volume keybindings)
+- **nmcli** (NetworkManager) - For WiFi toggle (optional, for WiFi keybinding)
 
 ## Installation
 
 1. Edit `config.mk` to match your local setup (defaults to `/usr/local`)
+   - On macOS, you may need to adjust `X11INC` and `X11LIB` paths
+   - Example for macOS with XQuartz: `X11INC = /opt/X11/include` and `X11LIB = /opt/X11/lib`
 
 2. Build and install:
    ```bash
    make clean install
    ```
+   
+   Note: `config.h` is automatically generated from `config.def.h` by the Makefile. If you encounter compilation errors about missing variables or functions, run `make clean` to force regeneration.
 
 3. Add to your `.xinitrc`:
    ```bash
@@ -89,6 +93,11 @@ dwm automatically switches between dark and light color schemes based on the pre
 - If `~/.lightmode` doesn't exist: uses dark color scheme (default)
 - To switch modes: create/remove `~/.lightmode` and send SIGHUP to dwm: `pkill -SIGHUP dwm`
 - Can be integrated with tools like `darkman` or `Redshift` for automatic switching
+
+### Gaps
+Simple gaps between windows (6px by default, configurable via `gappx` in `config.def.h`):
+- Gaps are automatically removed in monocle layout or when only one window is visible
+- Gaps are applied in tiled layouts when multiple windows are present
 
 ## Patches Applied
 
