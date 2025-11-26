@@ -2,12 +2,8 @@
 
 /* appearance */
 static const unsigned int borderpx  = 1;        /* border pixel of windows */
+static const unsigned int gappx     = 6;        /* gaps between windows */
 static const unsigned int snap      = 32;       /* snap pixel */
-static const unsigned int gappih    = 10;       /* horiz inner gap between windows */
-static const unsigned int gappiv    = 10;       /* vert inner gap between windows */
-static const unsigned int gappoh    = 10;       /* horiz outer gap between windows and screen edge */
-static const unsigned int gappov    = 10;       /* vert outer gap between windows and screen edge */
-static const int smartgaps          = 0;        /* 1 means no outer gap when there is only one window */
 static const unsigned int systraypinning = 0;   /* 0: sloppy systray follows selected monitor, >0: pin systray to monitor X */
 static const unsigned int systrayonleft = 0;    /* 0: systray in the right corner, >0: systray on left of status text */
 static const unsigned int systrayspacing = 2;   /* systray spacing */
@@ -24,10 +20,15 @@ static const char col_gray2[]       = "#444444";
 static const char col_gray3[]       = "#bbbbbb";
 static const char col_gray4[]       = "#eeeeee";
 static const char col_cyan[]        = "#005577";
-static const char *colors[][3]      = {
+static const char *colorsdark[][3]      = {
 	/*               fg         bg         border   */
-	[SchemeNorm] = { "#c0c0c0", "#1c1c1c", "#1c1c1c" },
-	[SchemeSel]  = { "#c0c0c0", "#1c1c1c", "#1c1c1c" },
+	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
+	[SchemeSel]  = { col_gray4, col_cyan,  col_cyan  },
+};
+static const char *colorslight[][3]      = {
+	/*               fg         bg         border   */
+	[SchemeNorm] = { col_gray1, col_gray3, col_gray2 },
+	[SchemeSel]  = { col_cyan,  col_gray4, col_cyan  },
 };
 
 /* tagging */
@@ -46,7 +47,7 @@ static const Rule rules[] = {
 /* layout(s) */
 static const float mfact     = 0.55; /* factor of master area size [0.05..0.95] */
 static const int nmaster     = 1;    /* number of clients in master area */
-static const int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
+static const int resizehints = 0;    /* 1 means respect size hints in tiled resizals */
 static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen window */
 static const int refreshrate = 120;  /* refresh rate (per second) for client move/resize */
 
@@ -69,8 +70,9 @@ static const Layout layouts[] = {
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
 
 /* commands */
-static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
+static char dmenumon[2] = "0"; /* component of dmenu{dark,light}, manipulated in spawndmenu() */
+static const char *dmenudark[] =  { "dmenu_run", "-m", dmenumon, "-b", "-i", "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
+static const char *dmenulight[] = { "dmenu_run", "-m", dmenumon, "-b", "-i", "-fn", dmenufont, "-nb", col_gray3, "-nf", col_gray1, "-sb", col_cyan, "-sf", col_gray4, NULL };
 static const char *termcmd[]  = { "st", NULL };
 static const char *volup[]    = { "pactl", "set-sink-volume", "@DEFAULT_SINK@", "+5%", NULL };
 static const char *voldown[]  = { "pactl", "set-sink-volume", "@DEFAULT_SINK@", "-5%", NULL };
@@ -80,7 +82,7 @@ static const char *wifitoggle[] = { "nmcli", "radio", "wifi", "toggle", NULL };
 #include "movestack.c"
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
-	{ MODKEY,                       XK_d,      spawn,          {.v = dmenucmd } },
+	{ MODKEY,                       XK_d,      spawndmenu,     {0} },
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
 	{ MODKEY,                       XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
@@ -88,22 +90,6 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_i,      incnmaster,     {.i = +1 } },
 	{ MODKEY,                       XK_h,      setmfact,       {.f = -0.05} },
 	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
-	{ MODKEY|Mod1Mask,              XK_h,      incrgaps,       {.i = +1 } },
-	{ MODKEY|Mod1Mask,              XK_l,      incrgaps,       {.i = -1 } },
-	{ MODKEY|Mod1Mask|ShiftMask,    XK_h,      incrogaps,      {.i = +1 } },
-	{ MODKEY|Mod1Mask|ShiftMask,    XK_l,      incrogaps,      {.i = -1 } },
-	{ MODKEY|Mod1Mask|ControlMask,  XK_h,      incrigaps,      {.i = +1 } },
-	{ MODKEY|Mod1Mask|ControlMask,  XK_l,      incrigaps,      {.i = -1 } },
-	{ MODKEY|Mod1Mask,              XK_0,      togglegaps,     {0} },
-	{ MODKEY|Mod1Mask|ShiftMask,    XK_0,      defaultgaps,    {0} },
-	{ MODKEY,                       XK_y,      incrihgaps,     {.i = +1 } },
-	{ MODKEY,                       XK_o,      incrihgaps,     {.i = -1 } },
-	{ MODKEY|ControlMask,           XK_y,      incrivgaps,     {.i = +1 } },
-	{ MODKEY|ControlMask,           XK_o,      incrivgaps,     {.i = -1 } },
-	{ MODKEY|Mod1Mask,              XK_y,      incrohgaps,     {.i = +1 } },
-	{ MODKEY|Mod1Mask,              XK_o,      incrohgaps,     {.i = -1 } },
-	{ MODKEY|ShiftMask,             XK_y,      incrovgaps,     {.i = +1 } },
-	{ MODKEY|ShiftMask,             XK_o,      incrovgaps,     {.i = -1 } },
 	{ MODKEY|ShiftMask,             XK_j,      movestack,      {.i = +1 } },
 	{ MODKEY|ShiftMask,             XK_k,      movestack,      {.i = -1 } },
 	{ MODKEY,                       XK_Tab,    view,           {0} },

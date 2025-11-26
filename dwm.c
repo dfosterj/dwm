@@ -29,7 +29,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/wait.h>
 #include <X11/cursorfont.h>
 #include <X11/keysym.h>
@@ -53,8 +52,8 @@
 #define ISVISIBLEONTAG(C, T)    ((C->tags & T))
 #define ISVISIBLE(C)            ISVISIBLEONTAG(C, C->mon->tagset[C->mon->seltags])
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
-#define WIDTH(X)                ((X)->w + 2 * (X)->bw)
-#define HEIGHT(X)               ((X)->h + 2 * (X)->bw)
+#define WIDTH(X)                ((X)->w + 2 * (X)->bw + gappx)
+#define HEIGHT(X)               ((X)->h + 2 * (X)->bw + gappx)
 #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
 
@@ -135,10 +134,6 @@ struct Monitor {
 	int by;               /* bar geometry */
 	int mx, my, mw, mh;   /* screen size */
 	int wx, wy, ww, wh;   /* window area  */
-	int gappih;           /* horizontal gap between windows */
-	int gappiv;           /* vertical gap between windows */
-	int gappoh;           /* horizontal outer gaps */
-	int gappov;           /* vertical outer gaps */
 	unsigned int seltags;
 	unsigned int sellt;
 	unsigned int tagset[2];
@@ -180,6 +175,7 @@ static void checkotherwm(void);
 static void cleanup(void);
 static void cleanupmon(Monitor *mon);
 static void clientmessage(XEvent *e);
+static void colormodehandler(int sig);
 static void configure(Client *c);
 static void configurenotify(XEvent *e);
 static void configurerequest(XEvent *e);
@@ -226,23 +222,13 @@ static void resizemouse(const Arg *arg);
 static void resizerequest(XEvent *e);
 static void restack(Monitor *m);
 static void run(void);
-static void runautostart(void);
 static void scan(void);
 static int sendevent(Window w, Atom proto, int m, long d0, long d1, long d2, long d3, long d4);
 static void sendmon(Client *c, Monitor *m);
 static void setclientstate(Client *c, long state);
+static void setcolormode(void);
 static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
-static void setgaps(int oh, int ov, int ih, int iv);
-static void incrgaps(const Arg *arg);
-static void incrigaps(const Arg *arg);
-static void incrogaps(const Arg *arg);
-static void incrohgaps(const Arg *arg);
-static void incrovgaps(const Arg *arg);
-static void incrihgaps(const Arg *arg);
-static void incrivgaps(const Arg *arg);
-static void togglegaps(const Arg *arg);
-static void defaultgaps(const Arg *arg);
 static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
 static void setup(void);
@@ -252,6 +238,7 @@ static void sigchld(int unused);
 static void sighup(int unused);
 static void sigterm(int unused);
 static void spawn(const Arg *arg);
+static void spawndmenu(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
@@ -287,16 +274,11 @@ static void zoom(const Arg *arg);
 
 /* variables */
 static Systray *systray = NULL;
-static const char autostartblocksh[] = "autostart_blocking.sh";
-static const char autostartsh[] = "autostart.sh";
 static const char broken[] = "broken";
-static const char dwmdir[] = "dwm";
-static const char localshare[] = ".local/share";
 static char stext[256];
 static int screen;
 static int sw, sh;           /* X display screen geometry width, height */
 static int bh;               /* bar height */
-static int enablegaps = 1;   /* enables gaps, used by togglegaps */
 static int lrpad;            /* sum of left and right padding for text */
 static int vp;               /* vertical padding for bar */
 static int sp;               /* side padding for bar */
@@ -323,11 +305,13 @@ static Atom wmatom[WMLast], netatom[NetLast], xatom[XLast];
 static int restart = 0;
 static int running = 1;
 static Cur *cursor[CurLast];
-static Clr **scheme;
+static Clr **scheme, **schemedark, **schemelight;
 static Display *dpy;
 static Drw *drw;
 static Monitor *mons, *selmon;
 static Window root, wmcheckwin;
+static const char **dmenucmd;
+static int colormodechanged;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -563,9 +547,12 @@ cleanup(void)
 	}
 	for (i = 0; i < CurLast; i++)
 		drw_cur_free(drw, cursor[i]);
-	for (i = 0; i < LENGTH(colors); i++)
-		drw_scm_free(drw, scheme[i], 3);
-	free(scheme);
+	for (i = 0; i < LENGTH(colorsdark); i++) {
+		drw_scm_free(drw, schemedark[i], 3);
+		drw_scm_free(drw, schemelight[i], 3);
+	}
+	free(schemedark);
+	free(schemelight);
 	XDestroyWindow(dpy, wmcheckwin);
 	drw_free(drw);
 	XSync(dpy, False);
@@ -651,6 +638,12 @@ clientmessage(XEvent *e)
 		if (c != selmon->sel && !c->isurgent)
 			seturgent(c, 1);
 	}
+}
+
+void
+colormodehandler(int sig)
+{
+	colormodechanged = 1;
 }
 
 void
@@ -763,10 +756,6 @@ createmon(void)
 	m->nmaster = nmaster;
 	m->showbar = showbar;
 	m->topbar = topbar;
-	m->gappih = gappih;
-	m->gappiv = gappiv;
-	m->gappoh = gappoh;
-	m->gappov = gappov;
 	m->lt[0] = &layouts[0];
 	m->lt[1] = &layouts[1 % LENGTH(layouts)];
 	strncpy(m->ltsymbol, layouts[0].symbol, sizeof m->ltsymbol);
@@ -1414,6 +1403,10 @@ propertynotify(XEvent *e)
 	Window trans;
 	XPropertyEvent *ev = &e->xproperty;
 
+	if (colormodechanged) {
+		setcolormode();
+		colormodechanged = 0;
+	}
 	if ((c = wintosystrayicon(ev->window))) {
 		if (ev->atom == XA_WM_NORMAL_HINTS) {
 			updatesizehints(c);
@@ -1508,12 +1501,36 @@ void
 resizeclient(Client *c, int x, int y, int w, int h)
 {
 	XWindowChanges wc;
+	unsigned int n;
+	unsigned int gapoffset;
+	unsigned int gapincr;
+	Client *nbc;
 
-	c->oldx = c->x; c->x = wc.x = x;
-	c->oldy = c->y; c->y = wc.y = y;
-	c->oldw = c->w; c->w = wc.width = w;
-	c->oldh = c->h; c->h = wc.height = h;
 	wc.border_width = c->bw;
+
+	/* Get number of clients for the client's monitor */
+	for (n = 0, nbc = nexttiled(c->mon->clients); nbc; nbc = nexttiled(nbc->next), n++);
+
+	/* Do nothing if layout is floating */
+	if (c->isfloating || c->mon->lt[c->mon->sellt]->arrange == NULL) {
+		gapincr = gapoffset = 0;
+	} else {
+		/* Remove border and gap if layout is monocle or only one client */
+		if (c->mon->lt[c->mon->sellt]->arrange == monocle || n == 1) {
+			gapoffset = 0;
+			gapincr = -2 * borderpx;
+			wc.border_width = 0;
+		} else {
+			gapoffset = gappx;
+			gapincr = 2 * gappx;
+		}
+	}
+
+	c->oldx = c->x; c->x = wc.x = x + gapoffset;
+	c->oldy = c->y; c->y = wc.y = y + gapoffset;
+	c->oldw = c->w; c->w = wc.width = w - gapincr;
+	c->oldh = c->h; c->h = wc.height = h - gapincr;
+
 	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
 	configure(c);
 	XSync(dpy, False);
@@ -1626,84 +1643,6 @@ run(void)
 }
 
 void
-runautostart(void)
-{
-	char *pathpfx;
-	char *path;
-	char *xdgdatahome;
-	char *home;
-	struct stat sb;
-
-	if ((home = getenv("HOME")) == NULL)
-		/* this is almost impossible */
-		return;
-
-	/* if $XDG_DATA_HOME is set and not empty, use $XDG_DATA_HOME/dwm,
-	 * otherwise use ~/.local/share/dwm as autostart script directory
-	 */
-	xdgdatahome = getenv("XDG_DATA_HOME");
-	if (xdgdatahome != NULL && *xdgdatahome != '\0') {
-		/* space for path segments, separators and nul */
-		pathpfx = ecalloc(1, strlen(xdgdatahome) + strlen(dwmdir) + 2);
-
-		if (sprintf(pathpfx, "%s/%s", xdgdatahome, dwmdir) <= 0) {
-			free(pathpfx);
-			return;
-		}
-	} else {
-		/* space for path segments, separators and nul */
-		pathpfx = ecalloc(1, strlen(home) + strlen(localshare)
-		                     + strlen(dwmdir) + 3);
-
-		if (sprintf(pathpfx, "%s/%s/%s", home, localshare, dwmdir) < 0) {
-			free(pathpfx);
-			return;
-		}
-	}
-
-	/* check if the autostart script directory exists */
-	if (! (stat(pathpfx, &sb) == 0 && S_ISDIR(sb.st_mode))) {
-		/* the XDG conformant path does not exist or is no directory
-		 * so we try ~/.dwm instead
-		 */
-		char *pathpfx_new = realloc(pathpfx, strlen(home) + strlen(dwmdir) + 3);
-		if(pathpfx_new == NULL) {
-			free(pathpfx);
-			return;
-		}
-		pathpfx = pathpfx_new;
-
-		if (sprintf(pathpfx, "%s/.%s", home, dwmdir) <= 0) {
-			free(pathpfx);
-			return;
-		}
-	}
-
-	/* try the blocking script first */
-	path = ecalloc(1, strlen(pathpfx) + strlen(autostartblocksh) + 2);
-	if (sprintf(path, "%s/%s", pathpfx, autostartblocksh) <= 0) {
-		free(path);
-		free(pathpfx);
-	}
-
-	if (access(path, X_OK) == 0)
-		system(path);
-
-	/* now the non-blocking script */
-	if (sprintf(path, "%s/%s", pathpfx, autostartsh) <= 0) {
-		free(path);
-		free(pathpfx);
-		return;
-	}
-
-	if (access(path, X_OK) == 0)
-		system(strcat(path, " &"));
-
-	free(pathpfx);
-	free(path);
-}
-
-void
 scan(void)
 {
 	unsigned int i, num;
@@ -1753,6 +1692,32 @@ setclientstate(Client *c, long state)
 
 	XChangeProperty(dpy, c->win, wmatom[WMState], wmatom[WMState], 32,
 		PropModeReplace, (unsigned char *)data, 2);
+}
+
+void
+setcolormode(void)
+{
+	static const char *file = ".lightmode";
+	static char *path = NULL;
+	const char *home;
+	size_t size;
+
+	if (!path && (home = getenv("HOME"))) {
+		size = strlen(home) + 1 + strlen(file) + 1;
+		path = malloc(size);
+		if (!path)
+			die("dwm: malloc failed");
+
+		snprintf(path, size, "%s/%s", home, file);
+	}
+
+	if (access(path, F_OK) == 0) {
+		scheme = schemelight;
+		dmenucmd = dmenulight;
+	} else {
+		scheme = schemedark;
+		dmenucmd = dmenudark;
+	}
 }
 
 int
@@ -1832,111 +1797,6 @@ setfullscreen(Client *c, int fullscreen)
 }
 
 void
-setgaps(int oh, int ov, int ih, int iv)
-{
-	if (oh < 0) oh = 0;
-	if (ov < 0) ov = 0;
-	if (ih < 0) ih = 0;
-	if (iv < 0) iv = 0;
-
-	selmon->gappoh = oh;
-	selmon->gappov = ov;
-	selmon->gappih = ih;
-	selmon->gappiv = iv;
-	arrange(selmon);
-}
-
-void
-togglegaps(const Arg *arg)
-{
-	enablegaps = !enablegaps;
-	arrange(selmon);
-}
-
-void
-defaultgaps(const Arg *arg)
-{
-	setgaps(gappoh, gappov, gappih, gappiv);
-}
-
-void
-incrgaps(const Arg *arg)
-{
-	setgaps(
-		selmon->gappoh + arg->i,
-		selmon->gappov + arg->i,
-		selmon->gappih + arg->i,
-		selmon->gappiv + arg->i
-	);
-}
-
-void
-incrigaps(const Arg *arg)
-{
-	setgaps(
-		selmon->gappoh,
-		selmon->gappov,
-		selmon->gappih + arg->i,
-		selmon->gappiv + arg->i
-	);
-}
-
-void
-incrogaps(const Arg *arg)
-{
-	setgaps(
-		selmon->gappoh + arg->i,
-		selmon->gappov + arg->i,
-		selmon->gappih,
-		selmon->gappiv
-	);
-}
-
-void
-incrohgaps(const Arg *arg)
-{
-	setgaps(
-		selmon->gappoh + arg->i,
-		selmon->gappov,
-		selmon->gappih,
-		selmon->gappiv
-	);
-}
-
-void
-incrovgaps(const Arg *arg)
-{
-	setgaps(
-		selmon->gappoh,
-		selmon->gappov + arg->i,
-		selmon->gappih,
-		selmon->gappiv
-	);
-}
-
-void
-incrihgaps(const Arg *arg)
-{
-	setgaps(
-		selmon->gappoh,
-		selmon->gappov,
-		selmon->gappih + arg->i,
-		selmon->gappiv
-	);
-}
-
-void
-incrivgaps(const Arg *arg)
-{
-	setgaps(
-		selmon->gappoh,
-		selmon->gappov,
-		selmon->gappih,
-		selmon->gappiv + arg->i
-	);
-}
-
-void
 setlayout(const Arg *arg)
 {
 	if (!arg || !arg->v || arg->v != selmon->lt[selmon->sellt])
@@ -1978,6 +1838,11 @@ setup(void)
 	sa.sa_flags = SA_NOCLDSTOP | SA_NOCLDWAIT | SA_RESTART;
 	sa.sa_handler = SIG_IGN;
 	sigaction(SIGCHLD, &sa, NULL);
+
+	/* set color mode on SIGHUP */
+	sigemptyset(&sa.sa_mask);
+	sa.sa_handler = colormodehandler;
+	sigaction(SIGHUP, &sa, NULL);
 
 	/* clean up any zombies (inherited from .xinitrc etc) immediately */
 	while (waitpid(-1, NULL, WNOHANG) > 0);
@@ -2025,9 +1890,13 @@ setup(void)
 	cursor[CurResize] = drw_cur_create(drw, XC_sizing);
 	cursor[CurMove] = drw_cur_create(drw, XC_fleur);
 	/* init appearance */
-	scheme = ecalloc(LENGTH(colors), sizeof(Clr *));
-	for (i = 0; i < LENGTH(colors); i++)
-		scheme[i] = drw_scm_create(drw, colors[i], 3);
+	schemedark = ecalloc(LENGTH(colorsdark), sizeof(Clr *));
+	schemelight = ecalloc(LENGTH(colorslight), sizeof(Clr *));
+	for (i = 0; i < LENGTH(colorsdark); i++) {
+		schemedark[i] = drw_scm_create(drw, colorsdark[i], 3);
+		schemelight[i] = drw_scm_create(drw, colorslight[i], 3);
+	}
+	setcolormode();
 	/* init system tray */
 	updatesystray();
 	/* init bars */
@@ -2107,8 +1976,6 @@ spawn(const Arg *arg)
 {
 	struct sigaction sa;
 
-	if (arg->v == dmenucmd)
-		dmenumon[0] = '0' + selmon->num;
 	if (fork() == 0) {
 		if (dpy)
 			close(ConnectionNumber(dpy));
@@ -2122,6 +1989,13 @@ spawn(const Arg *arg)
 		execvp(((char **)arg->v)[0], (char **)arg->v);
 		die("dwm: execvp '%s' failed:", ((char **)arg->v)[0]);
 	}
+}
+
+void
+spawndmenu(const Arg *arg)
+{
+	dmenumon[0] = '0' + selmon->num;
+	spawn(&(const Arg){.v = dmenucmd});
 }
 
 void
@@ -2145,32 +2019,28 @@ tagmon(const Arg *arg)
 void
 tile(Monitor *m)
 {
-	unsigned int i, n, h, r, oe = enablegaps, ie = enablegaps, mw, my, ty;
+	unsigned int i, n, h, mw, my, ty;
 	Client *c;
 
 	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
 	if (n == 0)
 		return;
 
-	if (smartgaps == n) {
-		oe = 0; // outer gaps disabled
-	}
-
 	if (n > m->nmaster)
-		mw = m->nmaster ? (m->ww + m->gappiv*ie) * m->mfact : 0;
+		mw = m->nmaster ? (m->ww * m->mfact) : 0;
 	else
-		mw = m->ww - 2*m->gappov*oe + m->gappiv*ie;
-	for (i = 0, my = ty = m->gappoh*oe, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+		mw = m->ww;
+	for (i = my = ty = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		if (i < m->nmaster) {
-			r = MIN(n, m->nmaster) - i;
-			h = (m->wh - my - m->gappoh*oe - m->gappih*ie * (r - 1)) / r;
-			resize(c, m->wx + m->gappov*oe, m->wy + my, mw - (2*c->bw) - m->gappiv*ie, h - (2*c->bw), 0);
-			my += HEIGHT(c) + m->gappih*ie;
+			h = (m->wh - my) / (MIN(n, m->nmaster) - i);
+			resize(c, m->wx, m->wy + my, mw - (2*c->bw) + (n > 1 ? gappx : 0), h - (2*c->bw), 0);
+			if (my + HEIGHT(c) < m->wh)
+				my += HEIGHT(c);
 		} else {
-			r = n - i;
-			h = (m->wh - ty - m->gappoh*oe - m->gappih*ie * (r - 1)) / r;
-			resize(c, m->wx + mw + m->gappov*oe, m->wy + ty, m->ww - mw - (2*c->bw) - 2*m->gappov*oe, h - (2*c->bw), 0);
-			ty += HEIGHT(c) + m->gappih*ie;
+			h = (m->wh - ty) / (n - i);
+			resize(c, m->wx + mw, m->wy + ty, m->ww - mw - (2*c->bw), h - (2*c->bw), 0);
+			if (ty + HEIGHT(c) < m->wh)
+				ty += HEIGHT(c);
 		}
 }
 
@@ -2775,7 +2645,6 @@ main(int argc, char *argv[])
 		die("pledge");
 #endif /* __OpenBSD__ */
 	scan();
-	runautostart();
 	run();
 	if(restart) execvp(argv[0], argv);
 	cleanup();
