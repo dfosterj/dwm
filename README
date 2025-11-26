@@ -58,8 +58,18 @@ This fork includes the following patches:
    ```
    This will remove `config.h` and force it to be regenerated from `config.def.h` on the next build.
 
-3. Add to your `.xinitrc`:
+3. Set up autostart script:
    ```bash
+   mkdir -p ~/.config/dwm
+   cp autostart.sh ~/.config/dwm/
+   # Optionally copy wallpaper
+   mkdir -p ~/.config/dwm/wallpaper
+   cp wallpaper/drwp1.jpeg ~/.config/dwm/wallpaper/ 2>/dev/null || true
+   ```
+
+4. Add to your `.xinitrc`:
+   ```bash
+   ~/.config/dwm/autostart.sh &
    exec dwm
    ```
 
