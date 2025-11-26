@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# Status bar loop: battery, volume, clock
-dwmbar_extra() {
+# Start status bar as separate background process
+(exec -a dwmbar_extra sh -c '
 	while true; do
 		# Battery
 		batt=""
@@ -17,13 +17,13 @@ dwmbar_extra() {
 		# PulseAudio volume
 		vol=""
 		if command -v pactl >/dev/null 2>&1; then
-			sink=$(pactl info 2>/dev/null | grep "Default Sink" | cut -d' ' -f3)
+			sink=$(pactl info 2>/dev/null | grep "Default Sink" | cut -d" " -f3)
 			if [ -n "$sink" ]; then
 				mute=$(pactl get-sink-mute "$sink" 2>/dev/null | grep -o "yes\|no")
 				if [ "$mute" = "yes" ]; then
 					vol="VOL Muted"
 				else
-					pct=$(pactl get-sink-volume "$sink" 2>/dev/null | head -1 | awk '{print $5}' | tr -d '%')
+					pct=$(pactl get-sink-volume "$sink" 2>/dev/null | head -1 | awk "{print \$5}" | tr -d "%")
 					[ -n "$pct" ] && vol="VOL $pct%"
 				fi
 			fi
@@ -34,7 +34,7 @@ dwmbar_extra() {
 		if command -v nmcli >/dev/null 2>&1; then
 			wifi_state=$(nmcli -t -f WIFI g 2>/dev/null)
 			if [ "$wifi_state" = "enabled" ]; then
-				ssid=$(nmcli -t -f ACTIVE,SSID dev wifi 2>/dev/null | grep '^yes:' | cut -d':' -f2)
+				ssid=$(nmcli -t -f ACTIVE,SSID dev wifi 2>/dev/null | grep "^yes:" | cut -d":" -f2)
 				[ -z "$ssid" ] && ssid="Disconnected"
 				wifi="WIFI $ssid"
 			else
@@ -43,16 +43,13 @@ dwmbar_extra() {
 		fi
 
 		# Clock
-		time="$(date '+%Y-%m-%d %I:%M:%S %p')"
+		time="$(date "+%Y-%m-%d %I:%M:%S %p")"
 
 		# Update dwm bar
 		xsetroot -name "${batt} | ${wifi} | ${vol} | ${time}"
 		sleep 1
 	done
-}
-
-# Start status bar as background process
-dwmbar_extra &
+') &
 
 # Startup procs
 export GTK_THEME="Adwaita:dark"
