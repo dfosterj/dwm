@@ -20,16 +20,10 @@ static const char col_gray2[]       = "#444444";
 static const char col_gray3[]       = "#bbbbbb";
 static const char col_gray4[]       = "#eeeeee";
 static const char col_cyan[]        = "#005577";
-static const char col_white[]       = "#ffffff";
-static const char *colorsdark[][3]      = {
+static const char *colors[][3]      = {
 	/*               fg         bg         border   */
-	[SchemeNorm] = { col_white, col_gray1, col_gray2 },
-	[SchemeSel]  = { col_white, col_gray1, col_gray2 },
-};
-static const char *colorslight[][3]      = {
-	/*               fg         bg         border   */
-	[SchemeNorm] = { col_white, col_gray3, col_gray2 },
-	[SchemeSel]  = { col_white, col_gray3, col_gray2 },
+	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
+	[SchemeSel]  = { col_gray3, col_gray1, col_gray2 },
 };
 
 /* tagging */
@@ -71,9 +65,8 @@ static const Layout layouts[] = {
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
 
 /* commands */
-static char dmenumon[2] = "0"; /* component of dmenu{dark,light}, manipulated in spawndmenu() */
-static const char *dmenudark[] =  { "dmenu_run", "-m", dmenumon, "-b", "-i", "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
-static const char *dmenulight[] = { "dmenu_run", "-m", dmenumon, "-b", "-i", "-fn", dmenufont, "-nb", col_gray3, "-nf", col_gray1, "-sb", col_cyan, "-sf", col_gray4, NULL };
+static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
+static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-b", "-i", "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
 static const char *termcmd[]  = { "st", NULL };
 static const char *volup[]    = { "pactl", "set-sink-volume", "@DEFAULT_SINK@", "+5%", NULL };
 static const char *voldown[]  = { "pactl", "set-sink-volume", "@DEFAULT_SINK@", "-5%", NULL };
@@ -83,7 +76,7 @@ static const char *wifitoggle[] = { "nmcli", "radio", "wifi", "toggle", NULL };
 #include "movestack.c"
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
-	{ MODKEY,                       XK_d,      spawndmenu,     {0} },
+	{ MODKEY,                       XK_d,      spawn,          {.v = dmenucmd } },
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
 	{ MODKEY,                       XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
