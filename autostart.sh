@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 #
-# Add to your ~/.xinitrc:
-#   ~/.config/dwm/autostart.sh &
-#   exec dwm
+# This script's start is backed into dwm.c
 #
+#   scan();
+#   system("$HOME/.config/dwm/autostart.sh &");
+#   run();
+#   if(restart) execvp(argv[0], argv);
+#   cleanup();
+#   XCloseDisplay(dpy);
+#   return EXIT_SUCCESS;
 
 # Start status bar as separate background process
 (exec -a dwmbar_extra sh -c '
@@ -77,5 +82,3 @@ if [ -n "$WALLPAPER" ] && [ -f "$WALLPAPER" ]; then
 		xwallpaper --zoom "$WALLPAPER" &
 	fi
 fi
-
-
