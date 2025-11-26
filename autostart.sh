@@ -1,31 +1,5 @@
 #!/bin/sh
 
-# Find wallpaper - try multiple locations
-WALLPAPER=""
-# Try relative to dwm source directory (if DWM_DIR is set)
-if [ -n "$DWM_DIR" ] && [ -f "$DWM_DIR/wallpaper/drwp1.jpeg" ]; then
-	WALLPAPER="$DWM_DIR/wallpaper/drwp1.jpeg"
-# Try common locations
-elif [ -f "$HOME/.local/share/dwm/wallpaper/drwp1.jpeg" ]; then
-	WALLPAPER="$HOME/.local/share/dwm/wallpaper/drwp1.jpeg"
-elif [ -f "$HOME/.dwm/wallpaper/drwp1.jpeg" ]; then
-	WALLPAPER="$HOME/.dwm/wallpaper/drwp1.jpeg"
-# Try to find it relative to common dwm install locations
-elif [ -f "/usr/local/share/dwm/wallpaper/drwp1.jpeg" ]; then
-	WALLPAPER="/usr/local/share/dwm/wallpaper/drwp1.jpeg"
-fi
-
-# Set wallpaper if found
-if [ -n "$WALLPAPER" ] && [ -f "$WALLPAPER" ]; then
-	if command -v feh >/dev/null 2>&1; then
-		feh --bg-scale "$WALLPAPER" &
-	elif command -v nitrogen >/dev/null 2>&1; then
-		nitrogen --set-scaled "$WALLPAPER" &
-	elif command -v xwallpaper >/dev/null 2>&1; then
-		xwallpaper --zoom "$WALLPAPER" &
-	fi
-fi
-
 # Status bar loop: battery, volume, clock
 while true; do
 	# Battery
@@ -74,3 +48,11 @@ while true; do
 	xsetroot -name "${batt} | ${wifi} | ${vol} | ${time}"
 	sleep 1
 done
+
+
+#startup procs
+export GTK_THEME="Adwaita:dark"
+dunst &
+feh --bg-scale ./wallpaper/drwp1.jpeg  &
+
+
