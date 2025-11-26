@@ -60,15 +60,11 @@ dunst &
 # Find wallpaper - try multiple locations
 WALLPAPER=""
 if [ -f "$HOME/.config/dwm/wallpaper/drwp1.jpeg" ]; then
-	WALLPAPER="$HOME/.config/dwm/wallpaper/drwp1.jpeg"
-elif [ -f "$HOME/.local/share/dwm/wallpaper/drwp1.jpeg" ]; then
-	WALLPAPER="$HOME/.local/share/dwm/wallpaper/drwp1.jpeg"
-elif [ -f "$HOME/.dwm/wallpaper/drwp1.jpeg" ]; then
-	WALLPAPER="$HOME/.dwm/wallpaper/drwp1.jpeg"
 elif [ -f "/usr/local/share/dwm/wallpaper/drwp1.jpeg" ]; then
-	WALLPAPER="/usr/local/share/dwm/wallpaper/drwp1.jpeg"
+	WALLPAPER="$HOME/.config/dwm/dwm.png"
 fi
-# Set wallpaper if found
+
+# Set wallpaper
 if [ -n "$WALLPAPER" ] && [ -f "$WALLPAPER" ]; then
 	if command -v feh >/dev/null 2>&1; then
 		feh --bg-scale "$WALLPAPER" &
