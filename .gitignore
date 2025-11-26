@@ -1,0 +1,19 @@
+# Patch backup files
+*.orig
+*.rej
+
+# Build artifacts
+dwm
+*.o
+config.h
+
+# Editor backup files
+*~
+*.swp
+*.swo
+.DS_Store
+
+# Autostart installation (user-specific)
+# Note: autostart.sh in source is tracked, but installed copies are not
+
+

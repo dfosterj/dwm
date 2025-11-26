@@ -1,0 +1,122 @@
+# dedwm - A minimal dwm fork
+
+This is a personal fork of [dwm](https://dwm.suckless.org/) - a dynamic window manager for X. This fork keeps dwm as small as possible while including only the patches and customizations that fit my specific needs.
+
+## Features
+
+This fork includes the following patches:
+- **attachaside** - New windows attach at the side of the focused window
+- **movestack** - Move clients up/down in the stack (Mod+Shift+j/k)
+- **systray** - System tray support in the status bar
+- **uselessgap** - Simple gaps between windows (6px by default)
+- **restartsig** - Restart dwm with signals or Mod+Ctrl+Shift+q
+
+## Customizations
+
+- **Modkey**: Uses Mod4Mask (Windows/Meta key) instead of Mod1Mask (Alt)
+- **Terminal**: Uses `st` as the default terminal
+- **Keybindings**:
+  - `Mod+d` - Launch dmenu (appears at bottom of screen)
+  - `Mod+Return` - Launch terminal
+  - `Mod+Shift+Escape` - Quit dwm
+  - `Mod+Ctrl+Shift+q` - Restart dwm
+  - `Mod+-` / `Mod+=` - Volume down/up
+  - `Mod+m` - Toggle mute
+  - `Mod+w` - Toggle WiFi
+  - `Mod+Shift+j/k` - Move windows up/down in stack
+  - `Mod+Ctrl+Left` - Previous workspace
+  - `Mod+Ctrl+Right` - Next workspace
+- **Gaps**: Simple 6px gaps between windows (configurable via `gappx` in `config.def.h`)
+
+## Requirements
+
+### Build Dependencies
+- Xlib header files
+- Xft library
+- A C compiler (gcc/clang)
+
+### Runtime Dependencies
+- **st** - Simple terminal (or modify `config.def.h` to use your preferred terminal)
+- **dmenu** - Application launcher (appears at bottom of screen)
+- **pactl** (PulseAudio) - For volume control (optional, for volume keybindings)
+- **nmcli** (NetworkManager) - For WiFi toggle (optional, for WiFi keybinding)
+
+## Installation
+
+1. Edit `config.mk` to match your local setup (defaults to `/usr/local`)
+   - On macOS, you may need to adjust `X11INC` and `X11LIB` paths
+   - Example for macOS with XQuartz: `X11INC = /opt/X11/include` and `X11LIB = /opt/X11/lib`
+
+2. Build and install:
+   ```bash
+   make clean install
+   ```
+   
+   **Important**: If you encounter compilation errors about missing variables or functions (like `dmenucmd`, `colors`, `incrgaps`, etc.), this usually means `config.h` is out of date. Run:
+   ```bash
+   make clean
+   ```
+   This will remove `config.h` and force it to be regenerated from `config.def.h` on the next build.
+
+3. Set up autostart script:
+   ```bash
+   mkdir -p ~/.config/dwm
+   cp autostart.sh ~/.config/dwm/
+   # Optionally copy wallpaper
+   mkdir -p ~/.config/dwm/wallpaper
+   cp wallpaper/drwp1.jpeg ~/.config/dwm/wallpaper/ 2>/dev/null || true
+   ```
+
+4. Add to your `.xinitrc`:
+   ```bash
+   ~/.config/dwm/autostart.sh &
+   exec dwm
+   ```
+
+## Configuration
+
+Configuration is done by editing `config.def.h` and recompiling:
+
+```bash
+# Edit config.def.h
+vim config.def.h
+
+# Rebuild
+make clean install
+```
+
+## Dependencies and Apps Used
+
+### Core Applications
+- **dwm** - Window manager (this fork)
+- **st** - Terminal emulator
+- **dmenu** - Application launcher
+
+### System Integration
+- **PulseAudio** (`pactl`) - Audio system for volume control
+- **NetworkManager** (`nmcli`) - Network management (for WiFi toggle)
+
+### Status Bar and Session Components
+The `./autostart.sh` script handles:
+- **Status bar updates**: Battery, WiFi, volume, and clock information displayed in the dwm bar
+- **Session startup**: Wallpaper setting, notification daemon (dunst), and GTK theme configuration
+
+Run `./autostart.sh` in your `.xinitrc` or session manager to enable these features.
+
+### Gaps
+Simple gaps between windows (6px by default, configurable via `gappx` in `config.def.h`):
+- Gaps are automatically removed in monocle layout or when only one window is visible
+- Gaps are applied in tiled layouts when multiple windows are present
+
+## Patches Applied
+
+All patches are located in the `patches/` directory:
+- `dwm-attachaside-6.6.diff`
+- `dwm-movestack-20211115-a786211.diff`
+- `dwm-systray-6.6.diff`
+- `dwm-uselessgap-20211119-58414bee958f2.diff`
+- `dwm-restartsig-20180523-6.2.diff`
+
+## License
+
+See LICENSE file. This fork maintains the same MIT/X Consortium license as upstream dwm.
