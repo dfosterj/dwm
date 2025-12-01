@@ -24,20 +24,37 @@
 			batt="$symbol $cap%"
 		fi
 
-		# PulseAudio volume
-		vol=""
-		if command -v pactl >/dev/null 2>&1; then
-			sink=$(pactl info 2>/dev/null | grep "Default Sink" | cut -d" " -f3)
-			if [ -n "$sink" ]; then
-				mute=$(pactl get-sink-mute "$sink" 2>/dev/null | grep -o "yes\|no")
-				if [ "$mute" = "yes" ]; then
-					vol="VOL Muted"
-				else
-					pct=$(pactl get-sink-volume "$sink" 2>/dev/null | head -1 | awk "{print \$5}" | tr -d "%")
-					[ -n "$pct" ] && vol="VOL $pct%"
-				fi
-			fi
-		fi
+		# PipeWire or PulseAudio volume
+        vol=""
+
+        if command -v wpctl >/dev/null 2>&1; then
+                # Extract default sink ID (match the * anywhere in the line)
+                sink=$(wpctl status 2>/dev/null \
+                        | awk '/Sinks:/{s=1; next} s && /\*/{for(i=1;i<=NF;i++) if ($i ~ /^[0-9]+\.$/) {print substr($i,1,length($i)-1); exit}}')
+
+                if [ -n "$sink" ]; then
+                        line=$(wpctl get-volume "$sink" 2>/dev/null)
+
+                        if echo "$line" | grep -q "MUTED"; then
+                                vol="VOL Muted"
+                        else
+                                pct=$(echo "$line" | awk '{print int($2*100)}')
+                                vol="VOL ${pct}%"
+                        fi
+                fi
+
+        elif command -v pactl >/dev/null 2>&1; then
+                sink=$(pactl info 2>/dev/null | grep "Default Sink" | awk '{print $3}')
+                if [ -n "$sink" ]; then
+                        mute=$(pactl get-sink-mute "$sink" 2>/dev/null | grep -o "yes\|no")
+                        if [ "$mute" = "yes" ]; then
+                                vol="VOL Muted"
+                        else
+                                pct=$(pactl get-sink-volume "$sink" 2>/dev/null | head -1 | awk '{print $5}' | tr -d "%")
+                                vol="VOL ${pct}%"
+                        fi
+                fi
+        fi
 
 		# Wi-Fi
 		wifi=""
